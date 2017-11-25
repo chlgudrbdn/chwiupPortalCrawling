@@ -27,7 +27,7 @@ public class INTest {
  
     @BeforeClass
     public static void setUp() throws Exception {
-        System.setProperty("webdriver.chrome.driver", "C://UISpace//crawling//chromedriver.exe"); //크롬 드라이버 파일 경로설정
+        System.setProperty("webdriver.chrome.driver", "chromedriver.exe"); //크롬 드라이버 파일 경로설정
         driver = new ChromeDriver();
         driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS); //응답시간 5초설정
         driver.get("http://kin.naver.com/index.nhn");  //접속할 사이트
