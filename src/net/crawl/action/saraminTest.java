@@ -1,6 +1,8 @@
+package net.crawl.action;
 
  
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
  
@@ -17,33 +19,38 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.Select;
+
+import net.board.db.BoardBean;
+import net.board.db.BoardDAOImpl;
  
 @FixMethodOrder (MethodSorters.NAME_ASCENDING)
- 
+
 public class saraminTest {
     private static WebDriver driver;
     String Title = null;
     String URL = null;
     String alertText = "";
 
+	CrawlDAOImpl boarddao=new CrawlDAOImpl();
+   	BoardBean boarddata=new BoardBean();
+   	
+   	
     public String show_detail_contents(String javascript_link) {
-//      javascript: show_detail_contents('32329495', '', 'suited_recruit_01', 2, 'none') �̷��� ��ũ�� ����.
-//      �Ʒ��� �Լ��� �ش� ������ �� �� �Ʒ� ��ũ�� ���� ���� �ȴ�.
     	String link;
     	String temp = javascript_link.substring( javascript_link.indexOf("(")+1 ,  javascript_link.indexOf(")")-1);
-    	temp=temp.replace("'", "");// ���� ����ǥ ����
-    	temp=temp.replace(" ", "");// ������� ����
+    	temp=temp.replace("'", "");
+    	temp=temp.replace(" ", "");
     	System.out.println(temp);
     	
     	String[] params=temp.split(",", -1);
     	// params[0]=rec_idx, params[1]=recommend_ids, params[2]=t_content, params[3]=list_seq, params[4]=last_param
-//    	for(String s : params) System.out.println(s);
+//    	for(String s : params) System.out.println(s);// for check
     	if(params[4].equals("null")) {
     		params[1]="none";
     	}
     	link="/zf_user/jobs/relay/recruit-view?inner_source=saramin&inner_medium=pattern&inner_campaign=suited_list_"
     				+params[3]+"&inner_term="+params[2]+"&view_type=tailor&rec_idx="+params[0]+"&recommend_ids="+params[1]+"&t_ref=suited_list&t_ref_content="+params[2];
-// ���� ���� �ڹٽ�ũ��Ʈ �ڵ�
+// origianl js function
 //			function show_detail_contents(rec_idx, recommend_ids, t_content, list_seq, last_param)
 //        {
 //            var openNewWindow = window.open();
@@ -54,8 +61,8 @@ public class saraminTest {
 //        }
 //    	http://www.saramin.co.kr/zf_user/jobs/relay/recruit-view?view_type=tailor&rec_idx=32346724&gz=1&recommend_ids=eJwzNjI2sjSxNAUAB1EBpg%3D%3D&inner_source=saramin&inner_medium=pattern&inner_campaign=suited_list_
 //    			1&inner_term=suited_recruit_01&t_ref=suited_list&t_ref_content=suited_recruit_01#seq=0
-//    	�� ������� �Ǿ�� �Ѵ�.
-    	System.out.println(link);
+
+//    	System.out.println(link);//check
     	return link;
     }
     
@@ -89,28 +96,58 @@ public class saraminTest {
         		listOfRecruitLink.add(Link);
         	}
         }
-
+        
+        String[] noticeKeyword_preferred = {"지원", "우대", "자격", "조건"};
+        Arrays.sort(noticeKeyword_preferred);
+        System.out.println("noticeKeyword_preferred : "+Arrays.toString(noticeKeyword_preferred));
         //parsing
+        int cnt = 0;
         for(String link : listOfRecruitLink) {
-//        	System.out.println("lets parse"+"http://www.saramin.co.kr/"+link);
-        	driver.get("http://www.saramin.co.kr"+link); 
+        	cnt++;
+        	System.out.println("lets parse no"+cnt+". : \n"+"http://www.saramin.co.kr/"+link);
+        	driver.get("http://www.saramin.co.kr"+link);
         	WebElement table = driver.findElement(By.className("table_summary")); //일단 이것부터 찾는다. 대부분 근본이 이쪽을 따른다.
-//        	System.out.println("it doen");
-        	WebElement recruit_guideline_preferred= table.findElement(By.tagName("recruit_guideline_preferred"));//이걸 찾는게 제일 빠르다.
-        	System.out.println("recruit_guideline_preferred : "+ recruit_guideline_preferred.getText());
-        	if(recruit_guideline_preferred == null) {//case1 'recruit_guideline_preferred' 태그가 없음. 그냥 section에 detail_user_content란 클래스로 명명된 부분 하위 table> thead > th태그 중에 자격|우대 라는 단어가 있는 표 긁어오는 걸로 퉁치기로함 // 
-//예시		<div class="detail_meta"><h3 class="title_meta">지원자격</h3><table class="tbl_meta"><colgroup><col style="width:110px;"><col style="width:330px;"><col style="width:110px;"><col style="width:330px;"></colgroup><tbody><tr><th scope="row">경력</th><td colspan="3">신입</td></tr><tr><th scope="row">학력</th><td colspan="3">학력무관										, 교육수강자 및 개발 가능자</td></tr></tbody></table></div>
-//        		table > tbody > tr:nth-child(1) > th:nth-child(2)
-
-        	}else if( table.findElement(By.cssSelector(".detail_user_content table th")) ==null) {//case2 recruit_guideline_preferred가 없을 경우 & 정형화된 표가 없다면 그냥 detail_meta 그 밑에 있는걸 가져올 것이다.
-    			
-    		}else if(   ) {//대신 별도의 표로 지원자격이란 detail meta란 div하위 h3 class="title_meta" 지원자격/우대조건인 경우.
-
-    			
-    		}
+        	if(table.findElement(By.tagName("recruit_guideline_preferred")).getText()  != null) {//case1 'recruit_guideline_preferred' 태그가 있음.
+        		String targetText = table.findElement(By.tagName("recruit_guideline_preferred")).getText();//이걸 찾는게 제일 빠르다.
+        		//그냥 section에 detail_user_content란 클래스로 명명된 부분 하위 table> thead > th태그 중에 자격|우대 라는 단어가 있는 표 긁어오는 걸로 퉁치기로함 // 
+        		System.out.println("recruit_guideline_preferred : "+ targetText );
+        		String preffered="";
+        		String required="";
+        		if(targetText.contains("우대")) {//우대사항
+        			targetText.indexOf("우대");
+        			preffered = targetText.substring( targetText.indexOf("우대") ,  targetText.indexOf("\n\n")-1);
+        			preffered=preffered.replace("\n", "");
+        	    	System.out.println("우대사항 문자열 : "+ preffered);
+        		}
+        		if(targetText.contains("자격")) {//자격요건
+        			targetText.indexOf("자격");
+        	    	required = targetText.substring( targetText.indexOf("자격") ,  targetText.indexOf("\n\n")-1);
+        	    	required=required.replace("\n", "");
+        	    	System.out.println("자격요건 문자열 : "+ required);
+        		}
+        		
+        		
+        		if(targetText.contains("필수")) {//필수사항
+        			targetText.indexOf("");	
+        		}
+        		
+        		
+        	}
+//        	else if(table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("지원") || 
+//        			table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("자격") || 
+//        			table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("우대") || 
+//        			table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("조건")) {
+//        		
+//        		
+//        	}
+//        	else if(  table.findElement(By.cssSelector("detail_meta > h3")).getText().contains("지원") ==null  ) {//대신 별도의 표로 지원자격이란 detail meta란 div하위 h3 class="title_meta" 지원자격/우대조건인 경우.
+//
+//    			
+//    		}
+//        	else if(   ) {//이 마저도 없는 이미지 인식은 어려우니 패스하되 표시만 해두자. section에 detail_user_content란 클래스로 명명된 부분에 이미지가 있으면 그런 케이스.
+//    			System.out.println("image!");
+//    		}
         	
-        	
-        	//이마저도 없는데 이미지 인식은 어려우니 패스하되 표시만 해두자. section에 detail_user_content란 클래스로 명명된 부분에 이미지가 있으면 그런 케이스.
         	
         	
 //    		//여러칸이라면 모집분야별로 어떻게 할지 고민해봐야함.
