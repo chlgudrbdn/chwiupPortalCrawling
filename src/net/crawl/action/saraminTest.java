@@ -20,8 +20,8 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.Select;
 
-import net.board.db.BoardBean;
-import net.board.db.BoardDAOImpl;
+import net.crawl.db.CrawlDAOImpl;
+import net.crawl.db.search_re_com_list_Bean;
  
 @FixMethodOrder (MethodSorters.NAME_ASCENDING)
 
@@ -32,15 +32,14 @@ public class saraminTest {
     String alertText = "";
 
 	CrawlDAOImpl boarddao=new CrawlDAOImpl();
-   	BoardBean boarddata=new BoardBean();
-   	
+	search_re_com_list_Bean crawlData=new search_re_com_list_Bean();
    	
     public String show_detail_contents(String javascript_link) {
     	String link;
     	String temp = javascript_link.substring( javascript_link.indexOf("(")+1 ,  javascript_link.indexOf(")")-1);
     	temp=temp.replace("'", "");
     	temp=temp.replace(" ", "");
-    	System.out.println(temp);
+//    	System.out.println(temp);
     	
     	String[] params=temp.split(",", -1);
     	// params[0]=rec_idx, params[1]=recommend_ids, params[2]=t_content, params[3]=list_seq, params[4]=last_param
@@ -50,7 +49,7 @@ public class saraminTest {
     	}
     	link="/zf_user/jobs/relay/recruit-view?inner_source=saramin&inner_medium=pattern&inner_campaign=suited_list_"
     				+params[3]+"&inner_term="+params[2]+"&view_type=tailor&rec_idx="+params[0]+"&recommend_ids="+params[1]+"&t_ref=suited_list&t_ref_content="+params[2];
-// origianl js function
+/* origianl js function
 //			function show_detail_contents(rec_idx, recommend_ids, t_content, list_seq, last_param)
 //        {
 //            var openNewWindow = window.open();
@@ -59,11 +58,90 @@ public class saraminTest {
 //            openNewWindow.location.href = "/zf_user/jobs/relay/recruit-view?inner_source=saramin&inner_medium=pattern&inner_campaign=suited_list_"
 //    			+list_seq+"&inner_term="+t_content+"&view_type=tailor&rec_idx="+rec_idx+"&recommend_ids="+recommend_ids+"&t_ref=suited_list&t_ref_content="+t_content;
 //        }
-//    	http://www.saramin.co.kr/zf_user/jobs/relay/recruit-view?view_type=tailor&rec_idx=32346724&gz=1&recommend_ids=eJwzNjI2sjSxNAUAB1EBpg%3D%3D&inner_source=saramin&inner_medium=pattern&inner_campaign=suited_list_
-//    			1&inner_term=suited_recruit_01&t_ref=suited_list&t_ref_content=suited_recruit_01#seq=0
-
-//    	System.out.println(link);//check
+    	System.out.println(link);//check*/
     	return link;
+    }
+    public String removeSpace(String targetText) {//공백제거용.
+    	targetText=targetText.replace(" ", "");
+    	return targetText;
+    }
+    public void categorizer_with_recruit_guideline_preferred(String targetText) {
+		String preex="";
+		String qual="";
+		
+		String[] tempText=targetText.split("\n",-1); //일단 문자열을 줄 별로 나눈다. 빈곳도 일단은 나타낸다.
+		String regex1 = "^[가-힣]*$"; //check category
+		String regex2 = "^- .*$"; //check item
+
+		for(int i =0 ; i<tempText.length ; i++) {
+			String s = tempText[i];
+			System.out.println("itme : "+s);
+			
+			
+			if(s.matches(regex1)) {
+				
+				if(s.contains("우대")) {
+//					System.out.print("우대이하 파트를 읽는다! \n");
+					i++;
+					s = tempText[i];
+					while(s.matches(regex2)) {
+						System.out.println("string : "+s);
+						preex += s;
+						i++;
+						if(i<tempText.length) {
+							s = tempText[i];
+						}else {
+							break;
+						}
+					}
+					removeSpace(preex);
+					System.out.println("우대사항: "+preex);
+					crawlData.setCom_preex(crawlData.getCom_preex() + preex );
+				}
+				
+				if(s.contains("자격")) {
+//					System.out.print("자격이다! \n");
+					i++;
+					s = tempText[i];
+					while(s.matches(regex2)) {
+						System.out.println("string : "+s);
+						qual += s;
+						i++;
+						if(i<tempText.length) {
+							s = tempText[i];
+						}else {
+							break;
+						}
+					}
+					removeSpace(qual);
+					System.out.println("자격요건: "+qual);
+					crawlData.setCom_qual( qual );
+				}
+				
+				if(s.contains("필수")) {
+//					System.out.print("필수다! \n");
+					i++;
+					s = tempText[i];
+					while(s.matches(regex2)) {
+						System.out.println("string : "+s);
+						qual += s;
+						i++;
+						if(i<tempText.length) {
+							s = tempText[i];
+						}else {
+							break;
+						}
+					}
+					removeSpace(qual);
+					System.out.println("필수요건: "+qual);
+					crawlData.setCom_qual( qual );
+				}
+			}
+			else if(s.isEmpty()) { //check enter //equals==""나 "\n"나 "\\"론 안됨.
+//				System.out.println("이것은 공백");
+				continue;
+			}
+		}
     }
     
     @BeforeClass
@@ -97,41 +175,27 @@ public class saraminTest {
         	}
         }
         
-        String[] noticeKeyword_preferred = {"지원", "우대", "자격", "조건"};
-        Arrays.sort(noticeKeyword_preferred);
-        System.out.println("noticeKeyword_preferred : "+Arrays.toString(noticeKeyword_preferred));
+//        String[] noticeKeyword_preferred = {"우대", "자격", "조건"", 지원"지원", "우대", "자격", "조건"};
+//        Arrays.sort(noticeKeyword_preferred);
+//        System.out.println("noticeKeyword_preferred : "+Arrays.toString(noticeKeyword_preferred));
         //parsing
         int cnt = 0;
         for(String link : listOfRecruitLink) {
         	cnt++;
-        	System.out.println("lets parse no"+cnt+". : \n"+"http://www.saramin.co.kr/"+link);
+        	System.out.println("lets parse no"+cnt+". : \n"+"http://www.saramin.co.kr"+link);
         	driver.get("http://www.saramin.co.kr"+link);
         	WebElement table = driver.findElement(By.className("table_summary")); //일단 이것부터 찾는다. 대부분 근본이 이쪽을 따른다.
         	if(table.findElement(By.tagName("recruit_guideline_preferred")).getText()  != null) {//case1 'recruit_guideline_preferred' 태그가 있음.
         		String targetText = table.findElement(By.tagName("recruit_guideline_preferred")).getText();//이걸 찾는게 제일 빠르다.
         		//그냥 section에 detail_user_content란 클래스로 명명된 부분 하위 table> thead > th태그 중에 자격|우대 라는 단어가 있는 표 긁어오는 걸로 퉁치기로함 // 
-        		System.out.println("recruit_guideline_preferred : "+ targetText );
-        		String preffered="";
-        		String required="";
-        		if(targetText.contains("우대")) {//우대사항
-        			targetText.indexOf("우대");
-        			preffered = targetText.substring( targetText.indexOf("우대") ,  targetText.indexOf("\n\n")-1);
-        			preffered=preffered.replace("\n", "");
-        	    	System.out.println("우대사항 문자열 : "+ preffered);
-        		}
-        		if(targetText.contains("자격")) {//자격요건
-        			targetText.indexOf("자격");
-        	    	required = targetText.substring( targetText.indexOf("자격") ,  targetText.indexOf("\n\n")-1);
-        	    	required=required.replace("\n", "");
-        	    	System.out.println("자격요건 문자열 : "+ required);
-        		}
+//        		System.out.println("recruit_guideline_preferred : \n"+ targetText );
+
+        		System.out.println("Parsing Test"); 
+        		categorizer_with_recruit_guideline_preferred(targetText);
         		
         		
-        		if(targetText.contains("필수")) {//필수사항
-        			targetText.indexOf("");	
-        		}
-        		
-        		
+        	}else {
+        		continue;
         	}
 //        	else if(table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("지원") || 
 //        			table.findElement(By.cssSelector(".detail_user_content table th")).getText().contains("자격") || 
