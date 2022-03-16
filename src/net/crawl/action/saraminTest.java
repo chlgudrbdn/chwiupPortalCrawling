@@ -154,7 +154,7 @@ public class saraminTest {
     @Test
     public void Step_01_login_Test () throws Exception {
     	driver.findElement(By.name("id")).sendKeys("chlgudrbdn");  //ID
-    	driver.findElement(By.name("password")).sendKeys("m6529194!"); //���
+    	driver.findElement(By.name("password")).sendKeys(""); //���
         driver.findElement(By.className("btn-login")).click(); //�α��� ��ư Ŭ��
     }
     @Test
